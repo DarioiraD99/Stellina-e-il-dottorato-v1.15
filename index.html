@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#14110d">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Borgo degli Ulivi</title>
+<title>Stellina e il Dottorato</title>
 
 <!-- Font pixel-art (serve internet; se manca, il gioco usa un font monospace) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -5218,6 +5218,36 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 </script>
-<script>if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
+<script>
+/* ---- Solo versione web/app: service worker + pulsante "INSTALLA L'APP" ----
+   Un sito non può installarsi da solo appena lo apri: il browser vuole un tocco della persona.
+   Per questo appare un pulsante sopra la schermata del titolo; se il browser lo permette parte
+   subito la finestra di installazione, altrimenti compaiono le istruzioni per quel browser. */
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+(() => {
+  if (!location.protocol.startsWith('http')) return;
+  const standalone = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone;
+  if (standalone) return;
+  let saltato = false; try { saltato = sessionStorage.getItem('noInstall') === '1'; } catch (e) {}
+  if (saltato) return;
+  let evento = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); evento = e; });
+  window.addEventListener('appinstalled', () => box.remove());
+  const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua), firefox = /Firefox|FxiOS/.test(ua);
+  const box = document.createElement('div');
+  box.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#14110d;color:#f4e4b8;font:12px/1.7 'Press Start 2P',monospace;padding:12px 14px calc(12px + env(safe-area-inset-bottom));text-align:center;border-top:3px solid #9a6a38";
+  box.innerHTML = '<div id="inst-t">Vuoi giocare come un\'app?</div><div style="margin-top:8px"><button id="inst-go" style="font:inherit;background:#9a6a38;color:#f4e4b8;border:0;border-radius:6px;padding:10px 14px">INSTALLA L\'APP</button> <button id="inst-no" style="font:inherit;background:none;color:#c9a070;border:0;padding:10px 8px">NO GRAZIE</button></div>';
+  document.body.appendChild(box);
+  const t = box.querySelector('#inst-t');
+  box.querySelector('#inst-no').onclick = () => { try { sessionStorage.setItem('noInstall', '1'); } catch (e) {} box.remove(); };
+  box.querySelector('#inst-go').onclick = async () => {
+    if (evento) { evento.prompt(); try { await evento.userChoice; } catch (e) {} box.remove(); return; }
+    t.style.fontSize = '10px';
+    t.innerHTML = ios ? (firefox ? 'Su iPhone apri questo link in SAFARI, poi tocca Condividi e "Aggiungi alla schermata Home".' : 'Tocca il tasto Condividi (il quadrato con la freccia) e scegli "Aggiungi alla schermata Home".')
+      : firefox ? 'Tocca i tre puntini del browser, poi "Installa" (oppure "Aggiungi alla schermata Home").'
+      : 'Tocca i tre puntini del browser, poi "Installa app" (oppure "Aggiungi alla schermata Home").';
+  };
+})();
+</script>
 </body>
 </html>
